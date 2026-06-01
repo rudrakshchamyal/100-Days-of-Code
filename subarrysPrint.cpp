@@ -13,7 +13,8 @@ int main(){
             }
             cout << "\t";
         }
-        cout << endl;
+        cout << endl;        
     }
+    
     return 0;
 }
