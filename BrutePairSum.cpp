@@ -15,6 +15,7 @@ int main(){
             if( target == vec[i] + vec[j] ){
                 p.push_back(vec[i]);
                 p.push_back(vec[j]);
+                found = true;
                 break;
             }
         }
