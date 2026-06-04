@@ -18,7 +18,6 @@ int main(){
 
             if( count >= arr.size()/2){
                 majorityElement = arr[i];
-                count = 0;
                 break;
             }
 
