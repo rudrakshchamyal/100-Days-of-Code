@@ -6,27 +6,27 @@ using namespace std;
 
 int main(){
 
-    vector<int> arr = {1};
+    vector<int> arr = {1,1,1,1,1,1,2,2};
     int n = arr.size();
     
-    sort(arr.begin(), arr.end() );
+    sort(arr.begin(), arr.end());
 
-    int count = 1, majorityElement = arr[0], temp = 0; 
-    for( int i = 1 ; i < n ; i++){
+    int count = 1;
+    int majorityElement = arr[0]; // Correctly handles 1-element arrays or if arr[0] is the majority
+    
+    for(int i = 1 ; i < n ; i++){
         
-        if( arr[i] == arr[i - 1] ){
+        if(arr[i] == arr[i - 1]){
             count++;
         }
-
         else{
-            temp = arr[i];
-            count = 1;
+            count = 1; // Reset count for the new number
         }
 
+        // If the current element we are counting hits the majority threshold
         if(count > n/2){
-            majorityElement = temp;
-        }
-                
+            majorityElement = arr[i]; 
+        }       
     }
 
     cout << majorityElement;
