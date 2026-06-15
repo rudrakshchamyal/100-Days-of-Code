@@ -10,13 +10,13 @@ int main(){
     int n, revNum = 0, lastDigit = 0;
     cout << "Enter a number = ";
     cin >> n;
-//123
+
     while(n != 0){
 
         lastDigit = n % 10;
         revNum = (10*revNum) + lastDigit;
         n /= 10;
-        
+
     }
 
     cout << "Reverse Number = " << revNum;
