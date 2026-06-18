@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Teaching Board Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- MathJax for rendering math text -->
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<!-- Desmos API for the Graph Plotter -->
+<script src="https://www.desmos.com/api/v1.9/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+
+<style>
+  :root {
+    --bg-page: #EEF1F4;
+    --bg-card: #FFFFFF;
+    --ink: #1B2430;
+    --ink-soft: #5B6472;
+    --accent: #1E3A5F;
+    --line: #D7DEE6;
+  }
+
+  /* --- NIGHT MODE VARIABLES --- */
+  body.dark-mode {
+    --bg-page: #0f172a;
+    --bg-card: #1e293b;
+    --ink: #f8fafc;
+    --ink-soft: #94a3b8;
+    --accent: #3b82f6;
+    --line: #334155;
+  }
+
+  * { box-sizing: border-box; }
+  
+  body {
+    margin: 0; min-height: 100vh;
+    background: var(--bg-page); color: var(--ink);
+    font-family: 'Space Grotesk', sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    transition: background 0.3s, color 0.3s;
+  }
+  
+  .page { width: 100%; max-width: 1000px; display: flex; flex-direction: column; gap: 15px; }
+  
+  header { display: flex; justify-content: space-between; align-items: flex-end; }
+  h1 { margin: 0; font-size: 28px; }
+  
+  .status { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; background-color: #22c55e; border-radius: 50%; display: inline-block; }
+  .dot.thinking { background-color: #eab308; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  .board-frame { background: var(--bg-card); border-radius: 8px; padding: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); transition: background 0.3s; }
+  
+  #board { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #ffffff; border: 1px solid var(--line); border-radius: 4px; cursor: crosshair; touch-action: none; transition: border-color 0.3s; }
+  
+  /* CSS Magic: Inverts the canvas colors so it looks like a dark chalkboard, but saves as a white image! */
+  body.dark-mode #board { filter: invert(0.9) hue-rotate(180deg); }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: var(--bg-card); padding: 12px; border-radius: 8px; border: 1px solid var(--line); transition: background 0.3s, border-color 0.3s; }
+  .tool-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  
+  .btn { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 500; padding: 8px 16px; border-radius: 4px; cursor: pointer; background: transparent; border: 1px solid var(--line); color: var(--ink-soft); transition: all 0.2s; }
+  .btn:hover { background: var(--bg-page); color: var(--ink); }
+  .btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-danger:hover { background: #fee2e2; color: #ef4444; border-color: #fca5a5; }
+  .btn-process { background: #22c55e; color: white; border-color: #22c55e; font-weight: bold; }
+  .btn-process:hover { background: #16a34a; color: white; }
+  .btn-graph { background: #8b5cf6; color: white; border-color: #8b5cf6; font-weight: bold; }
+  .btn-graph:hover { background: #7c3aed; color: white; }
+
+  /* Toggle Switch CSS */
+  .switch-wrapper { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; border-left: 1px solid var(--line); padding-left: 15px; margin-left: 5px; }
+  .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+  .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+  input:checked + .slider { background-color: var(--accent); }
+  input:checked + .slider:before { transform: translateX(20px); }
+
+  #mathResult { display: none; background: var(--bg-card); border-left: 4px solid var(--accent); border-radius: 4px; padding: 20px; font-size: 22px; text-align: left; box-shadow: 0 2px 10px rgba(0,0,0,0.05); min-height: 80px; transition: background 0.3s; }
+  
+  /* Graph Container */
+  #calculatorWrapper { display: none; margin-top: 5px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); transition: border-color 0.3s; }
+  #calculator { width: 100%; height: 400px; }
+</style>
+</head>
+<body class="dark-mode">
+  <div class="page">
+    <header>
+      <h1>Live Teaching Board</h1>
+      <div style="display: flex; gap: 15px; align-items: center;">
+        <button id="themeToggle" class="btn">☀️ Day Mode</button>
+        <div class="status" id="status">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusText">Ready to write...</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="board-frame">
+      <canvas id="board" width="1000" height="562"></canvas>
+    </div>
+
+    <div class="toolbar">
+      <div class="tool-group">
+        <button id="penBtn" class="btn active">✏️ Pen</button>
+        <button id="eraserBtn" class="btn">🧽 Eraser</button>
+        <button id="clearBtn" class="btn btn-danger">🗑️ Clear</button>
+        
+        <div class="switch-wrapper">
+          <span>Auto-Convert</span>
+          <label class="switch">
+            <input type="checkbox" id="autoToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      <div class="tool-group">
+        <button id="toggleGraphBtn" class="btn btn-graph">📊 Show Graph</button>
+        <button id="manualProcessBtn" class="btn btn-process">✨ Convert</button>
+      </div>
+    </div>
+
+    <div id="mathResult"></div>
+    
+    <div id="calculatorWrapper">
+        <div id="calculator"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const canvas = document.getElementById('board');
+      const ctx = canvas.getContext('2d');
+      const penBtn = document.getElementById('penBtn');
+      const eraserBtn = document.getElementById('eraserBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const autoToggle = document.getElementById('autoToggle');
+      const manualProcessBtn = document.getElementById('manualProcessBtn');
+      const toggleGraphBtn = document.getElementById('toggleGraphBtn');
+      const themeToggle = document.getElementById('themeToggle');
+      const statusText = document.getElementById('statusText');
+      const statusDot = document.getElementById('statusDot');
+      const mathBox = document.getElementById('mathResult');
+      const calcWrapper = document.getElementById('calculatorWrapper');
+
+      // Initialize Desmos Calculator in Dark Mode natively
+      const calculator = Desmos.GraphingCalculator(document.getElementById('calculator'), {
+        expressions: true,
+        settingsMenu: false,
+        invertedColors: true 
+      });
+
+      let drawing = false;
+      let lastX = 0, lastY = 0;
+      let currentTool = 'pen';
+      let autoProcessTimer = null;
+      const SAFE_DELAY = 4500; 
+
+      // --- THEME TOGGLE LOGIC ---
+      let isDarkMode = true; 
+      themeToggle.addEventListener('click', () => {
+        isDarkMode = !isDarkMode;
+        document.body.classList.toggle('dark-mode', isDarkMode);
+        themeToggle.textContent = isDarkMode ? '☀️ Day Mode' : '🌙 Night Mode';
+        calculator.updateSettings({ invertedColors: isDarkMode });
+      });
+
+      // --- GRAPH TOGGLE LOGIC ---
+      let isGraphVisible = false;
+      toggleGraphBtn.addEventListener('click', () => {
+        isGraphVisible = !isGraphVisible;
+        calcWrapper.style.display = isGraphVisible ? 'block' : 'none';
+        toggleGraphBtn.textContent = isGraphVisible ? '📊 Hide Graph' : '📊 Show Graph';
+        if (isGraphVisible) calculator.resize(); 
+      });
+
+      function paintBackground() {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      paintBackground();
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const point = e.touches ? e.touches[0] : e;
+        return { x: (point.clientX - rect.left) * scaleX, y: (point.clientY - rect.top) * scaleY };
+      }
+
+      // TOOLS
+      penBtn.addEventListener('click', () => { currentTool = 'pen'; penBtn.classList.add('active'); eraserBtn.classList.remove('active'); canvas.style.cursor = 'crosshair'; });
+      eraserBtn.addEventListener('click', () => { currentTool = 'eraser'; eraserBtn.classList.add('active'); penBtn.classList.remove('active'); canvas.style.cursor = 'cell'; });
+      
+      clearBtn.addEventListener('click', () => { 
+        paintBackground(); 
+        clearTimeout(autoProcessTimer); 
+        mathBox.style.display = 'none'; 
+        calculator.setBlank(); // Clear the graph
+        statusText.textContent = 'Board cleared.'; 
+      });
+
+      // TOGGLE LOGIC
+      function updateToggleState() {
+        if (autoToggle.checked) {
+          manualProcessBtn.style.display = 'none';
+          statusText.textContent = 'Auto mode on. Write to start.';
+        } else {
+          manualProcessBtn.style.display = 'block';
+          clearTimeout(autoProcessTimer);
+          statusText.textContent = 'Manual mode. Click Convert when ready.';
+        }
+      }
+      autoToggle.addEventListener('change', updateToggleState);
+      updateToggleState();
+
+      // DRAWING
+      function startDraw(e) {
+        drawing = true;
+        clearTimeout(autoProcessTimer);
+        statusText.textContent = currentTool === 'eraser' ? 'Erasing...' : 'Writing...';
+        statusDot.className = 'dot'; statusDot.style.backgroundColor = '#22c55e'; 
+
+        ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        if (currentTool === 'eraser') { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 40; } 
+        else { ctx.strokeStyle = '#1B2430'; ctx.lineWidth = 4; }
+
+        const pos = getPos(e); lastX = pos.x; lastY = pos.y;
+      }
+
+      function draw(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(pos.x, pos.y); ctx.stroke();
+        lastX = pos.x; lastY = pos.y;
+      }
+
+      function stopDraw() {
+        if (!drawing) return;
+        drawing = false;
+        
+        if (autoToggle.checked) {
+            statusText.textContent = 'Waiting to auto-convert...';
+            autoProcessTimer = setTimeout(sendToGemini, SAFE_DELAY);
+        } else {
+            statusText.textContent = 'Waiting for you to click Convert.';
+        }
+      }
+
+      canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDraw); canvas.addEventListener('mouseleave', stopDraw);
+      canvas.addEventListener('touchstart', startDraw, { passive: false }); canvas.addEventListener('touchmove', draw, { passive: false }); canvas.addEventListener('touchend', stopDraw);
+
+      manualProcessBtn.addEventListener('click', sendToGemini);
+
+      // SEND TO AI (PYTHON BACKEND)
+      function sendToGemini() {
+        const base64Image = canvas.toDataURL('image/png');
+
+        statusText.textContent = 'Gemini AI is reading...';
+        statusDot.className = 'dot thinking';
+
+        fetch('http://127.0.0.1:5000/process-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64Image })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            // 1. Show the Math Result
+            mathBox.style.display = 'block';
+            mathBox.innerHTML = data.message;
+            if (window.MathJax) window.MathJax.typesetPromise([mathBox]).catch(err => console.log(err));
+            
+            // 2. SMARTER GRAPH PARSING
+            calculator.setBlank(); 
+            
+            let mathExpressions = [];
+            
+            // Try to find math inside brackets: \[ \], \( \), $$ $$, or $ $
+            const latexRegex = /\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)|\$\$([\s\S]*?)\$\$|\$([^\$]+)\$/g;
+            let match;
+            while ((match = latexRegex.exec(data.message)) !== null) {
+                mathExpressions.push((match[1] || match[2] || match[3] || match[4]).trim());
+            }
+
+            // FALLBACK: If no brackets were found, but the text has an "=" sign (like y=x^2)
+            if (mathExpressions.length === 0 && data.message.includes('=')) {
+                // Strip out the word "math" or "latex" if the AI added it accidentally
+                let cleanRaw = data.message.replace(/\\\[|\\\]|\\\(|\\\)|\\\$|\$/g, '').trim();
+                mathExpressions.push(cleanRaw);
+            }
+
+            // If we found any math expressions, send them to Desmos!
+            if (mathExpressions.length > 0) {
+                mathExpressions.forEach((expr, index) => {
+                    calculator.setExpression({ id: 'expr' + index, latex: expr });
+                });
+
+                // MAGIC: Automatically pop open the graph
+                if (!isGraphVisible) {
+                    isGraphVisible = true;
+                    calcWrapper.style.display = 'block';
+                    toggleGraphBtn.textContent = '📊 Hide Graph';
+                    calculator.resize();
+                }
+            }
+
+            statusText.textContent = 'Done!';
+            statusDot.className = 'dot'; statusDot.style.backgroundColor = '#3b82f6';
+          } else {
+            statusText.textContent = 'Quota Exceeded or Error!';
+            statusDot.className = 'dot'; statusDot.style.backgroundColor = '#ef4444';
+          }
+        })
+        .catch(error => {
+          statusText.textContent = 'Server disconnected.';
+          statusDot.className = 'dot'; statusDot.style.backgroundColor = '#ef4444';
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
