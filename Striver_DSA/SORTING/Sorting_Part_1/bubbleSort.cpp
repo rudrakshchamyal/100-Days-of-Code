@@ -1,19 +1,20 @@
 #include<iostream>
 using namespace std;
 
-void bubbleSort(int n, int arr[]){
-    // Outer loop now uses 'i'
-    for(int i = 0; i < n - 1; i++){
-        
-        // Inner loop now uses 'j'
-        // Stops at n - 1 - i to stay safely within bounds
-        for(int j = 0; j < n - 1 - i; j++){
-            if(arr[j+1] < arr[j]){
-                // Swap the elements using a temporary variable
-                int temp = arr[j];
-                arr[j] = arr[j+1];
-                arr[j+1] = temp;
+void bubbleSort(int n, int arr[]) {
+    for (int i = n - 1; i >= 0; i--) {
+        int didSwap = 0;
+        for (int j = 0; j <= i - 1; j++) {
+            if (arr[j] > arr[j+1]) {
+                int temp = arr[j+1];
+                arr[j+1] = arr[j];
+                arr[j] = temp;
+
+                didSwap = 1;
             }
+        }
+        if(didSwap == 0){
+            break;  // Already Sorted
         }
     }
 }
@@ -30,11 +31,11 @@ void print(int n, int arr[]){
 }
 
 int main(){
-    int arr[] = {3, 1, 2, 4, 6, 5, 10, 8, 9};
-    int size = sizeof(arr) / sizeof(arr[0]); 
+    int arr[] = {5,4,2,4,12,423,4};
+    int Size = sizeof(arr) / sizeof(arr[0]); 
 
-    bubbleSort(size, arr);
-    print(size, arr);
+    bubbleSort(Size, arr);
+    print(Size, arr);
 
     return 0;
 }

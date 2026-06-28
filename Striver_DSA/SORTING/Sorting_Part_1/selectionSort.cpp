@@ -1,39 +1,45 @@
-#include<iostream>
-using namespace std;
+#include <iostream>
+#include <vector>
+#include <utility> // For std::swap
 
-void selectionSort(int n, int arr[]){
-    for(int i = 0 ; i < n-1 ; i++){
-        int min = arr[i];
-        for(int j = i ; j < n ; j++){
-            if(min > arr[j]){
-                min = arr[j];
-                arr[j] = arr [i];
-                arr[i] = min; 
+void selectionSort(std::vector<int>& arr) {
+    int n = arr.size();
+
+    // One by one move the boundary of the unsorted subarray
+    for (int i = 0; i < n - 1; ++i) {
+        // Find the minimum element in the unsorted array
+        int minIdx = i;
+        for (int j = i + 1; j < n; ++j) {
+            if (arr[j] < arr[minIdx]) {
+                minIdx = j;
             }
+        }
 
+        // Swap the found minimum element with the first element of the unsorted part
+        if (minIdx != i) {
+            std::swap(arr[i], arr[minIdx]);
         }
     }
-
-
-
 }
 
-void print(int n, int arr[]){
-
-    cout << "[";
-    for(int i = 0 ; i < n ; i++){
-        if(i != n-1){
-            cout << arr[i] << ", ";
-        }
+// Helper function to print the array
+void printArray(const std::vector<int>& arr) {
+    for (int num : arr) {
+        std::cout << num << " ";
     }
-    cout << arr[n-1] << "]";
+    std::cout << std::endl;
 }
 
-int main(){
+int main() {
+    std::vector<int> data = {64, 25, 12, 22, 11};
 
-    int arr[] = { 3,5,7,1,2};
-    selectionSort(5, arr);
-    print(5, arr);
+    std::cout << "Original array: ";
+    printArray(data);
+
+    selectionSort(data);
+
+    std::cout << "Sorted array:   ";
+    printArray(data);
 
     return 0;
 }
